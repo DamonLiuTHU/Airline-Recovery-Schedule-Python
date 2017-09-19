@@ -4,8 +4,8 @@
 import pandas as pd
 import xlrd
 import numpy as np
-import solution1.Airline as airline
-import solution1.Aircraft as aircraft
+import Solution1.Airline as airline
+import Solution1.Aircraft as aircraft
 import os, sys
 retval = os.getcwd()
 os.chdir( retval )

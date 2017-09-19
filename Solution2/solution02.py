@@ -170,7 +170,7 @@ def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
     # now we need to calculate the delays for new route A and route B respectively.
     newA_delay_total, delay_array_A = calculate_delay_for_route_without_considering_the_later_on_delays(newA)
     newB_delay_total, delay_array_B = calculate_delay_for_route_without_considering_the_later_on_delays(newB)
-    if newA_delay_total + newB_delay_total + 30 * 60 < origin_routeA_delay + origin_routeB_delay:
+    if newA_delay_total + newB_delay_total < origin_routeA_delay + origin_routeB_delay:
         print('swap happened!')
         newA[0].display()
         newB[0].display()
@@ -252,11 +252,5 @@ if __name__ == '__main__':
                                 break
                 break
     import excel_writer as writer_tool
-
     writer_tool.write_schedule(schedule, 'solution2.xls')
-
-    sum = 0
-    for airline in schedule:
-        sum += airline.delay_time
-    print('total sum : ', sum)
     print('task success.')

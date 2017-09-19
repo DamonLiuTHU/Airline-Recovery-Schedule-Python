@@ -49,33 +49,6 @@ def OVS_reopen_time_stamp():
     return 1461358800
 
 
-def solve_maintainence_balance(schedule_set):
-    "this method solve the maintainence problem for each plane, return value is the delay time needed for maintainence"
-    planes = []
-    total_delay = 0
-    for aircraft in schedule_set:
-        if not planes.__contains__(aircraft.plane_tail_number):
-            planes.append(aircraft.plane_tail_number)
-
-    for plane in planes:
-        prev = 0
-        for airline in schedule_set:
-            if airline.plane_tail_number == plane:
-                "check if the time is 45min + previous arrive time."
-                if airline.depart_time_stamp + airline.delay_time - prev >= 45 * 60:
-                    prev = airline.arrive_time_stamp + airline.delay_time
-                    continue
-                else:
-                    delay_value = 45 * 60 - (airline.depart_time_stamp + airline.delay_time - prev)
-                    airline.delay_time += delay_value
-                    total_delay += delay_value
-                    prev = airline.arrive_time_stamp + delay_value
-            else:
-                break
-
-    return total_delay
-
-
 def solve_max_capacity_problem(schedule_set):
     depart_time_spot = {}
     arrive_time_spot = {}
@@ -100,6 +73,7 @@ def solve_max_capacity_problem(schedule_set):
 
 
 def minimum_idle_time():
+    "plane's shortest wait time before it can carry next flight"
     return 45 * 60
 
 
@@ -125,9 +99,17 @@ def calculate_delay_for_route_without_considering_the_later_on_delays(route):
         if wait_time < minimum_idle_time():
             tmp_delay = minimum_idle_time() - wait_time
             tmp_delay_array[j] += tmp_delay
-    for tmp in tmp_delay_array:
+    for i in range(0, len(tmp_delay_array)):
+        tmp = tmp_delay_array[i] * get_seat_count_for_airline(route[i])
         delay_total += tmp
     return delay_total, tmp_delay_array
+
+
+def each_traveler_fail_to_board_cost():
+    return 2 * 3600
+
+
+swap_counter = 0
 
 
 def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
@@ -135,10 +117,10 @@ def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
     origin_routeA_delay = 0
     origin_routeB_delay = 0
     for route in RouteA:
-        origin_routeA_delay += route.delay_time
+        origin_routeA_delay += route.delay_time * get_seat_count_for_airline(route)
 
     for route in RouteB:
-        origin_routeB_delay += route.delay_time
+        origin_routeB_delay += route.delay_time * get_seat_count_for_airline(route)
 
     newA = []
     newB = []
@@ -170,7 +152,8 @@ def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
     # now we need to calculate the delays for new route A and route B respectively.
     newA_delay_total, delay_array_A = calculate_delay_for_route_without_considering_the_later_on_delays(newA)
     newB_delay_total, delay_array_B = calculate_delay_for_route_without_considering_the_later_on_delays(newB)
-    if newA_delay_total + newB_delay_total + 30 * 60 < origin_routeA_delay + origin_routeB_delay:
+    if newA_delay_total + newB_delay_total + abs(get_seat_count_for_airline(A_airline) - get_seat_count_for_airline(
+            B_airline)) * each_traveler_fail_to_board_cost() < origin_routeA_delay + origin_routeB_delay:
         print('swap happened!')
         newA[0].display()
         newB[0].display()
@@ -185,15 +168,26 @@ def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
     return newA, newB
 
 
+air_crafts = reader.read_from_aircraft()
+
+
+def get_seat_count_for_airline(airline):
+    for aircraft in air_crafts:
+        if aircraft.tail_number == airline.plane_tail_number:
+            return aircraft.seat_count
+
+
 if __name__ == '__main__':
     print('init')
     schedule = reader.read_from_schedule()
-    air_crafts = reader.read_from_aircraft()
+
     print(time.asctime(time.gmtime(1461302220)))
     start_time = 1461302220
     end_time = 1461302220 + 48 * 60 * 60
     print('question 02')
     # Route_Set = []  # set of class Route.
+
+    # data prepare. map tail number to route(a set of airlines.)
     Map = {}  # key - value pairs of tail_num to its whole route.
     for air_craft in air_crafts:
         tail_num = air_craft.tail_number
@@ -213,22 +207,23 @@ if __name__ == '__main__':
 
     # Step 2. 计算在各自的route中，因首延误航班导致后续延误 所产生的所有后续延误集合。
     # now we have array first_delay_airline_set full of first delayed airlines
-    total_delay = 0  # the delays for all the airlines affected by OVS and their later airlines.
+    total_cost = 0  # the delays for all the airlines affected by OVS and their later airlines.
     tail_num_2_total_delayed_airlines_count = {}  # all the planes that have more than one .
     for first_delayed_airline in first_delay_airline_set:
-        tail_num = first_delayed_airline.plane_tail_number
+        tail_num = first_delayed_airline.plane_tail_number  # here we delay the first airline caused by OVS.
         route_arr = Map.get(tail_num)
         for i in range(0, len(route_arr)):
             if route_arr[i] == first_delayed_airline:
                 break
-        total_delay += delay_airline(first_delayed_airline)  # first add the delay of first airline.
+        total_cost += delay_airline(first_delayed_airline) * get_seat_count_for_airline(
+            first_delayed_airline)  # first add the delay of first airline.
         for j in range(i + 1, len(route_arr)):
             wait_time = route_arr[j].depart_time_stamp - (
                 route_arr[j - 1].arrive_time_stamp + route_arr[j - 1].delay_time)
             if wait_time < minimum_idle_time():
                 tmp_delay = minimum_idle_time() - wait_time
                 route_arr[j].delay_time += tmp_delay
-                total_delay += tmp_delay
+                total_cost += tmp_delay * get_seat_count_for_airline(route_arr[j])
                 arr = tail_num_2_total_delayed_airlines_count.get(
                     tail_num, [])
                 arr.append(route_arr[j])
@@ -251,12 +246,13 @@ if __name__ == '__main__':
                                 try_swap_routes(arr, route_arr, airline, route_arr_airline)
                                 break
                 break
+
     import excel_writer as writer_tool
 
-    writer_tool.write_schedule(schedule, 'solution2.xls')
+    writer_tool.write_schedule(schedule, 'solution3.xls')
 
     sum = 0
     for airline in schedule:
-        sum += airline.delay_time
-    print('total sum : ', sum)
+        sum += airline.delay_time * get_seat_count_for_airline(airline)
+    print('total cost: ', sum)
     print('task success.')

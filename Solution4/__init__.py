@@ -253,7 +253,7 @@ if __name__ == '__main__':
                 break
     import excel_writer as writer_tool
 
-    writer_tool.write_schedule(schedule, 'solution2.xls')
+    writer_tool.write_schedule(schedule, 'solution4.xls')
 
     sum = 0
     for airline in schedule:
