@@ -170,7 +170,7 @@ def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
     # now we need to calculate the delays for new route A and route B respectively.
     newA_delay_total, delay_array_A = calculate_delay_for_route_without_considering_the_later_on_delays(newA)
     newB_delay_total, delay_array_B = calculate_delay_for_route_without_considering_the_later_on_delays(newB)
-    if newA_delay_total + newB_delay_total + 30 * 60 < origin_routeA_delay + origin_routeB_delay:
+    if newA_delay_total + newB_delay_total < origin_routeA_delay + origin_routeB_delay:
         print('swap happened!')
         newA[0].display()
         newB[0].display()
@@ -185,14 +185,77 @@ def try_swap_routes(RouteA, RouteB, A_airline, B_airline):
     return newA, newB
 
 
+def get_flight_with_id(flight_id, schedule):
+    for line in schedule:
+        if line.airline_number == flight_id:
+            return line
+
+
+def get_all_the_flights(schedule, tail_num):
+    s = []
+    for airline in schedule:
+        if airline.plane_tail_number == tail_num:
+            s.append(airline)
+    return s
+
+
+def delay_between(cur_flight, nxt_flight):
+    gap_time = nxt_flight.depart_time_stamp + nxt_flight.delay_time - cur_flight.arrive_time_stamp - cur_flight.delay_time
+    return gap_time
+
+
+def try_to_solve_conflict_for(pax, schedule, flightA, flightB, delay_time_for_flightB, route_2_traveller_count_dic):
+    # choice 01 . just delay the next flight.
+    cost_1 = 0
+    tail_num = flightB.plane_tail_number
+    array_of_tail = get_all_the_flights(schedule, tail_num)
+    import numpy as np
+    array_of_tail = array_of_tail[array_of_tail.index(flightB):len(array_of_tail)]
+    cost_1 += delay_time_for_flightB * route_2_traveller_count_dic.get(flightB.airline_number, 0)
+
+    for i in range(1, len(array_of_tail)):
+        if delay_between(array_of_tail[i - 1], array_of_tail[i]) < 45 * 60:
+            cost_1 += (45 * 60 - delay_between(array_of_tail[i - 1],
+                                               array_of_tail[i])) * route_2_traveller_count_dic.get(
+                array_of_tail[i].airline_number, 0)
+        else:
+            break
+    # choice 02 . just let these paxes fail to board the next.
+    cost_2 = pax.same_tour_count * 24 * 3600
+
+    if cost_1 < cost_2:
+        for i in range(1, len(array_of_tail)):
+            if delay_between(array_of_tail[i - 1], array_of_tail[i]) < 45 * 60:
+                array_of_tail[i].delay_time += (45 * 60 - delay_between(array_of_tail[i - 1],
+                                                                        array_of_tail[i]))
+            else:
+                break
+        print('solve conflict with delay.')
+        return 0
+    else:
+        print('solve conflict with cost.', cost_2)
+        return cost_2
+
+
 if __name__ == '__main__':
     print('init')
     schedule = reader.read_from_schedule()
     air_crafts = reader.read_from_aircraft()
+    array_of_pax = reader.read_from_Pax_info()
+
+    traveller_id_2_route = {}
+    route_2_traveller_count = {}
+    for pax in array_of_pax:
+        arr = traveller_id_2_route.get(pax.traveller_id, [])
+        arr.append(pax.flight_id)
+        traveller_id_2_route[pax.traveller_id] = arr
+        value = route_2_traveller_count.get(pax.flight_id, 0) + pax.same_tour_count
+        route_2_traveller_count[pax.flight_id] = value
+
     print(time.asctime(time.gmtime(1461302220)))
     start_time = 1461302220
     end_time = 1461302220 + 48 * 60 * 60
-    print('question 02')
+    print('question 04')
     # Route_Set = []  # set of class Route.
     Map = {}  # key - value pairs of tail_num to its whole route.
     for air_craft in air_crafts:
@@ -251,12 +314,40 @@ if __name__ == '__main__':
                                 try_swap_routes(arr, route_arr, airline, route_arr_airline)
                                 break
                 break
+
+
+    # Step 4. calculate Pax info.
+    def get_flight_with_id(flight_id):
+        for line in schedule:
+            if line.airline_number == flight_id:
+                return line
+
+
+    cost = 0
+    for pax in array_of_pax:
+        if len(traveller_id_2_route[
+                   pax.traveller_id]) > 1:  # calculate the cost between delay the next flight and just cancel.
+            for i in range(0, len(traveller_id_2_route[pax.traveller_id]) - 1):
+                cur_flight_id = traveller_id_2_route[pax.traveller_id][i]
+                nxt_flight_id = traveller_id_2_route[pax.traveller_id][i + 1]
+                cur_flight = get_flight_with_id(cur_flight_id)  # the current flight.
+                nxt_flight = get_flight_with_id(nxt_flight_id)  # the next flight.
+                gap_time = nxt_flight.depart_time_stamp + nxt_flight.delay_time - cur_flight.arrive_time_stamp - cur_flight.delay_time
+                if cur_flight.arrive_airport == nxt_flight.depart_airport and gap_time < 45 * 60:  # need to consider different strategy
+                    delay_time_tmp = gap_time
+                    cost += try_to_solve_conflict_for(pax, schedule, cur_flight, nxt_flight, 45 * 60 - gap_time,
+                                                      route_2_traveller_count)
+                    # print('error!', 'check Pax : ', pax)
+
     import excel_writer as writer_tool
 
     writer_tool.write_schedule(schedule, 'solution4.xls')
 
     sum = 0
     for airline in schedule:
-        sum += airline.delay_time
+        sum += airline.delay_time * route_2_traveller_count.get(
+            airline.airline_number, 0)
+
+    sum += cost
     print('total sum : ', sum)
     print('task success.')

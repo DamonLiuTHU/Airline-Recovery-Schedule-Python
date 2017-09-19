@@ -6,10 +6,12 @@ import xlrd
 import numpy as np
 import Solution1.Airline as airline
 import Solution1.Aircraft as aircraft
+import Solution4.Pax as Pax
 import os, sys
+
 retval = os.getcwd()
-os.chdir( retval )
-print('current dir : '+retval)
+os.chdir(retval)
+print('current dir : ' + retval)
 file_path = 'Schedules.xlsx'
 
 
@@ -66,6 +68,22 @@ def read_from_aircraft(path='Aircrafts.xlsx'):
                                 departure_port=row_data[4], seat_count=row_data[5])
         air.earliest_available_time = row_data[7]
         air.latest_available_time = row_data[8]
+        data.append(air)
+        # air.display()
+    # print('total row count : ', number_of_rows)
+    return data
+
+
+def read_from_Pax_info(path='Paxinfo_useful.xlsx'):
+    xlrd.Book.encoding = 'utf-8'
+    raw_data = xlrd.open_workbook(path)
+    table = raw_data.sheets()[0]
+    number_of_rows = table.nrows
+    data = []
+    for line_number in range(1, number_of_rows):
+        row_data = table.row_values(line_number)
+        i = -0;
+        air = Pax.Pax(traveller_id=row_data[0], fl=row_data[1], same=row_data[2])
         data.append(air)
         # air.display()
     # print('total row count : ', number_of_rows)
