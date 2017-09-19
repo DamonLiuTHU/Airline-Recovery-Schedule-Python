@@ -8,7 +8,7 @@ class Airline:
     arrive_airport = ''
     plane_type = ''
     plane_tail_number = ''
-    delay_time = -1
+    delay_time = 0
 
     def __init__(self, airline_number, depart_time_stamp, arrive_time_stamp, depart_airport, arrive_airport, plane_type,
                  plane_tail_number):

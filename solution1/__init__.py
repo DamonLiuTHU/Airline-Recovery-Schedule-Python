@@ -5,6 +5,7 @@ import datetime, time
 from datetime import tzinfo, timedelta
 import excel_writer
 
+
 class UTC(tzinfo):
     """UTC"""
 
@@ -28,6 +29,8 @@ def is_time_ovs_closed(timestamp):
 def solve_current_situation(current_time_stamp, schedules, aircrafts):
     return
 
+def OVS_reopen_time_stamp():
+    return 1461358800
 
 def delay_airline(schedule_set, tmp):
     "schedule set is all the airlines, and the second param is the airline that need to be delayed."
@@ -70,6 +73,7 @@ def solve_maintainence_balance(schedule_set):
 
     return total_delay
 
+
 def solve_max_capacity_problem(schedule_set):
     depart_time_spot = {}
     arrive_time_spot = {}
@@ -90,37 +94,23 @@ def solve_max_capacity_problem(schedule_set):
         else:
             arrive_time_spot[arrive_key] = 1
 
-    return depart_time_spot,arrive_time_spot
+    return depart_time_spot, arrive_time_spot
 
 
 if __name__ == '__main__':
     print('init')
-    schedule = reader.read_from_schedule_for_planetype_9()
+    schedule = reader.read_from_schedule()
     air_crafts = reader.read_from_aircraft()
+    Routes = []
     print(time.asctime(time.gmtime(1461302220)))
-    start_time = 1461302220
+    start_time = 1461302220 / (10 * 60)
     end_time = 1461302220 + 48 * 60 * 60
+    end_time /= 600
     # for time in range(start_time, end_time, 600):
     # solve_current_situation(time, schedule, air_crafts)
     count = 0
     total_delay = 0
-    for tmp in schedule:
-        if tmp.arrive_airport == 'OVS' and is_time_ovs_closed(
-                tmp.arrive_time_stamp) or tmp.depart_airport == 'OVS' and is_time_ovs_closed(tmp.depart_time_stamp):
-            total_delay += delay_airline(schedule, tmp)
-            count += 1
-            continue
-    print(count)
-    print('total delay ', total_delay)
+    # for time in  range(start_time, end_time, 1):
 
-
-    total_delay += solve_maintainence_balance(schedule)
-    print('total delay ', total_delay)
-
-
-    depart_set, arrive_set = solve_max_capacity_problem(schedule)
-    print(depart_set)
-    print(arrive_set)
-    excel_writer.write_schedule(schedule)
 
 

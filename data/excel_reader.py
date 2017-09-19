@@ -27,7 +27,7 @@ def read_from_schedule(path='Schedules.xlsx'):
                               arrive_airport=row_data[i + 5], plane_type=row_data[i + 6],
                               plane_tail_number=row_data[i + 7])
         data.append(air)
-        air.display()
+        # air.display()
     # print('total row count : ', number_of_rows)
     return data
 
