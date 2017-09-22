@@ -78,10 +78,11 @@ def solve_max_capacity_problem(schedule_set):
         depart_key = airline.depart_time_stamp / 600
         arrive_key = airline.arrive_time_stamp / 600
         if depart_time_spot.__contains__(depart_key):
-            # if depart_time_spot[depart_key]<5:
-            depart_time_spot[depart_key] += 1
-            # else:
-            #     delay_value = delay_airline(schedule_set,airline)
+            if depart_time_spot[depart_key]<5:
+                depart_time_spot[depart_key] += 1
+            else:
+                delay_value = delay_airline(schedule_set,airline)
+
         else:
             depart_time_spot[depart_key] = 1
 
@@ -111,16 +112,22 @@ if __name__ == '__main__':
             count += 1
             continue
     print(count)
-    print('total delay ', total_delay)
+    # print('total delay ', total_delay)
 
 
     total_delay += solve_maintainence_balance(schedule)
-    print('total delay ', total_delay)
+    # print('total delay ', total_delay)
 
 
     depart_set, arrive_set = solve_max_capacity_problem(schedule)
-    print(depart_set)
-    print(arrive_set)
+    # print(depart_set)
+    # print(arrive_set)
     excel_writer.write_schedule(schedule)
+
+    sum = 0
+    for line in schedule:
+        sum += line.delay_time
+
+    print(sum)
 
 
